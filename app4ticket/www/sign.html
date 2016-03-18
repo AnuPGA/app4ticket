@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+<link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" href="apple-touch-startup-image-640x1096.png">
+<title>mobix - mobile web app template</title>
+<link rel="stylesheet" href="css/framework7.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="css/colors/red.css">
+<link type="text/css" rel="stylesheet" href="css/swipebox.css" />
+<link type="text/css" rel="stylesheet" href="css/animations.css" />
+<link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300,700,900' rel='stylesheet' type='text/css'>
+<style type="text/css">	
+	input {
+		padding: .5em;
+		margin: .5em;
+	}
+	select {
+		padding: .5em;
+		margin: .5em;
+	}
+	#signatureparent {
+		color:darkblue;		
+		padding:20px;
+	}
+	
+	/*This is the div within which the signature canvas is fitted*/
+	#signature {
+		border: 2px dotted black;
+		background-color:lightgrey;
+	}
+
+	/* Drawing the 'gripper' for touch-enabled devices */ 
+	html.touch #content {
+		float:left;
+		width:92%;
+	}
+	html.touch #scrollgrabber {
+		float:right;
+		width:4%;
+		margin-right:2%;		background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAFCAAAAACh79lDAAAAAXNSR0IArs4c6QAAABJJREFUCB1jmMmQxjCT4T/DfwAPLgOXlrt3IwAAAABJRU5ErkJggg==)
+	}
+	html.borderradius #scrollgrabber {
+		border-radius: 1em;
+	}
+	 
+</style> 
+<script type="text/javascript" charset="utf-8" src="phonegap.js"></script>
+</head>
+<body id="mobile_wrap">
+
+<div class="pages">
+  <div data-page="projects" class="page no-toolbar no-navbar">
+    <div class="page-content">
+    
+     <div class="navbarpages">
+       <div class="nav_left_logo"><a href="index.html"><img src="images/logo.png" style="height:55px;" alt="" title="" /></a></div>
+       <div class="nav_right_button"><a href="http://192.168.1.20/anu/app/mobix/mobix-html/#!/menu.html"><img src="images/icons/white/menu.png" alt="" title="" /></a></div>
+     </div>
+     <div id="pages_maincontent" style="overflow:initial !important;">
+   
+     
+   
+
+			<h2 class="page_title">Signature</h2>     
+             
+			
+					<div id="signatureparent" style="">
+					<div id="signature"></div>
+					</div>
+					<div id="tools">
+					<form  method="POST">
+					  <input type="hidden" name="ticketid" id="ticketid" value=""  class="ticketid">
+					 </form>
+						<button type="button" id="submit" style="background-color:#811308;color:white;border-radius:6px;margin-left:10px;padding:3px 20px;border:2px inset;font-weight:700;" onclick="validationcheck()">SUBMIT</button>	
+						
+						<input type="button" id="reset" value="RESET" style="background-color:#811308;color:white;border-radius:6px;padding:3px 20px;border:2px inset;font-weight:700;">
+						
+						
+						
+
+						<a href ='./#!/tables.html' id="update" >
+						<input type="button" id="back" value="BACK" style="background-color:#811308;color:white;border-radius:6px;padding:3px 20px;border:2px inset;font-weight:700;">
+						</a>
+						
+					
+					</div>
+				
+					<!--<button type="button" id="image" style="float:left;padding:.5em;margin-top:-173px;margin-left:10.2em" onclick="imagepreview()">Image Preview</button>-->
+					<div style="visibility:hidden;"><p>Display Area:</p><div id="displayarea"></div></div>
+			
+				
+      
+    </div>
+  </div>
+</div>  
+
+
+<script src="jquery.js"></script>
+
+<script type="text/javascript">
+jQuery.noConflict()	
+</script>
+<script>
+
+(function($) {
+	var topics = {};
+	$.publish = function(topic, args) {
+	    if (topics[topic]) {
+	        var currentTopic = topics[topic],
+	        args = args || {};
+	
+	        for (var i = 0, j = currentTopic.length; i < j; i++) {
+	            currentTopic[i].call($, args);
+	        }
+	    }
+	};
+	$.subscribe = function(topic, callback) {
+	    if (!topics[topic]) {
+	        topics[topic] = [];
+	    }
+	    topics[topic].push(callback);
+	    return {
+	        "topic": topic,
+	        "callback": callback
+	    };
+	};
+	$.unsubscribe = function(handle) {
+	    var topic = handle.topic;
+	    if (topics[topic]) {
+	        var currentTopic = topics[topic];
+	
+	        for (var i = 0, j = currentTopic.length; i < j; i++) {
+	            if (currentTopic[i] === handle.callback) {
+	                currentTopic.splice(i, 1);
+	            }
+	        }
+	    }
+	};
+})(jQuery);
+
+</script>
+<script src="jSignature.min.noconflict.js"></script>
+<script>
+(function($){
+
+$(document).ready(function() {
+	
+	// This is the part where jSignature is initialized.
+	var $sigdiv = $("#signature").jSignature({'UndoButton':true})
+	
+	// All the code below is just code driving the demo. 
+	, $tools = $('#tools')
+	, $extraarea = $('#displayarea')
+	, pubsubprefix = 'jSignature.demo.'
+	
+	var export_plugins = $sigdiv.jSignature('listPlugins','export')
+	, chops = ['<span style="visibility:hidden;"><b>Extract signature data as: </b></span><select id="mySelect" style="visibility:hidden;">','<option value="">(select export format)</option>']
+	, name
+		
+		if (export_plugins.hasOwnProperty){
+			//name = export_plugins[i]
+				name="native"
+			chops.push('<option value="' + name + '" id="test">' + name + '</option>')
+		}
+
+	chops.push('</select><span style="visibility:hidden;"><b> or: </b></span>')
+	
+	$(chops.join('')).bind('change', function(e){
+		if (e.target.value !== ''){
+			var data = $sigdiv.jSignature('getData', e.target.value)
+			$.publish(pubsubprefix + 'formatchanged')
+			if (typeof data === 'string'){
+				$('textarea', $tools).val(data)
+			} else if($.isArray(data) && data.length === 2){
+				$('textarea', $tools).val(data.join(','))
+				$.publish(pubsubprefix + data[0], data);
+			} else {
+				try {
+					$('textarea', $tools).val(JSON.stringify(data))
+				} catch (ex) {
+					$('textarea', $tools).val('Not sure how to stringify this, likely binary, format.')
+				}
+			}
+		}
+	}).appendTo($tools)
+
+	
+ $('#reset').bind('click', function(e){
+	$sigdiv.jSignature('reset');
+	$('#displayarea').hide();
+	})
+	
+		$.subscribe(pubsubprefix + 'image/png;base64', function(data) {
+		var i = new Image()
+		i.src = 'data:' + data[0] + ',' + data[1]
+		$('<span><b>As you can see, one of the problems of "image" extraction (besides not working on some old Androids, elsewhere) is that it extracts A LOT OF DATA and includes all the decoration that is not part of the signature.</b></span>').appendTo($extraarea)
+		$(i).appendTo($extraarea)
+	});
+	
+//	$('<input type="submit" value="Submit" onclick="onDeviceReady();">').bind('click', function(e){
+	//	$sigdiv.jSignature('submit')
+	//}).appendTo($tools)
+	
+	$('<div><textarea style="width:100%;height:7em;visibility:hidden;" id="sign" name="sign" value="" ></textarea></div>').appendTo($tools)
+	
+//	if (Modernizr.touch){
+	//	$('#scrollgrabber').height($('#content').height())		
+	//}
+	
+})
+
+})(jQuery)
+</script>
+
+
+
+<script type="text/javascript">
+
+//function imagepreview() { 
+//jQuery('#displayarea').show();
+//document.getElementById('mySelect').value = "image";
+ //alert()
+  //jQuery('#mySelect').trigger('change');	
+//}
+var full_url = document.URL; 
+var url_array = full_url.split('='); 
+var last_segment = url_array[url_array.length-1];  
+
+jQuery('#ticketid').val(last_segment);
+
+
+  function validationcheck() {   
+   document.getElementById('mySelect').value = "native";
+
+    jQuery('#mySelect').trigger('change');
+
+			var myimage="[]";
+			var sign= jQuery('#sign').val();
+			//alert(sign+"asfdafd");
+		if (sign == myimage) {
+		   
+		   alert("Please put your signature.");
+		   document.getElementById('sign').focus(); 
+		} 
+		 else
+		 {
+			 success();
+		 }
+  
+ }   
+ function success(){
+ 
+ 
+ var data=jQuery('#sign').val();
+ var id=jQuery('#ticketid').val();
+	//alert(id);
+	
+ var formURL = 'http://techsupport.cfnet.in/mobix/insertsign/';
+ jQuery.ajax({ 
+					type:'POST',
+					url:formURL,			        
+					crossDomain: true,
+					cache: false,
+				    data: "sign="+data+ "&id="+id,
+					//data: { sign : jQuery("#sign").val(),id: jQuery("#ticketid").val()   },
+					contentType: false,
+					processData: false,
+					async:false,
+					success:function(response){
+					
+					if(response==1)
+					{
+					alert("successfully inserted");
+					
+					}
+					else
+					{
+					alert("not inserted");
+					}
+					
+					
+				}
+		});
+  
+  }	
+ </script>
+</body>
+</html>
